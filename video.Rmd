@@ -1,0 +1,158 @@
+---
+title: "Models"
+author: "Sam Dumble"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+https://danielroelfs.com/blog/everything-is-a-linear-model/
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(agridat)
+library(tidyverse)
+  data()
+  
+  summary(australia.soybean)
+  
+ australia.soybean<-australia.soybean %>%
+   mutate(gen2=as.numeric(substr(gen,2,3)),
+                          variety=ifelse(gen2>=41,"Improved","Local"),
+          year=factor(year)) 
+  
+australia.soybean_70<-australia.soybean %>%
+  filter(year=="1970")
+```
+
+
+```{r}
+ australia.soybean_70%>%
+  ggplot(aes(y=yield,x=protein))+
+  geom_point()+
+  geom_smooth(method="lm")
+```
+
+```{r}
+cor(australia.soybean_70$yield,australia.soybean_70$protein) 
+```
+
+
+```{r}
+lm(yield~protein,australia.soybean_70) %>% summary()
+
+cor(australia.soybean_70$protein,australia.soybean_70$yield)**2
+```
+
+
+
+```{r}
+
+australia.soybean%>%
+  ggplot(aes(y=yield,x=year))+
+  geom_violin()+
+  geom_boxplot(width=0.2)
+```
+
+```{r}
+t.test(yield~year,data=australia.soybean,var.equal=TRUE)
+
+lm(yield~year,data=australia.soybean) %>%
+  summary()
+
+lm(yield~year,data=australia.soybean) %>%
+  confint()
+```
+
+
+```{r}
+
+australia.soybean_wide<-australia.soybean%>%
+  select(loc,gen,year,yield) %>%
+  spread(year,yield,sep = "_")
+
+
+with(australia.soybean_wide,t.test(year_1971,year_1970,paired=TRUE))
+
+lm(I(year_1971-year_1970)~1,data=australia.soybean_wide) %>%
+  summary()
+
+lm(I(year_1971-year_1970)~1,data=australia.soybean_wide) %>%
+  confint()
+```
+
+
+```{r}
+aov(yield~loc,data=australia.soybean,subset=year=="1970") %>%
+  summary()
+
+aov(yield~loc,data=australia.soybean,subset=year=="1970") %>%
+  coef()
+
+
+lm(yield~loc,data=australia.soybean,subset=year=="1970") %>%
+  summary()
+
+lm(yield~loc,data=australia.soybean,subset=year=="1970") %>%
+  anova()
+```
+
+
+
+```{r}
+aov(yield~loc*year,data=australia.soybean) %>%
+  summary()
+
+aov(yield~loc*year,data=australia.soybean) %>%
+  coef()
+
+
+lm(yield~loc*year,data=australia.soybean) %>%
+  summary()
+
+lm(yield~loc*year,data=australia.soybean) %>%
+  anova()
+```
+
+
+```{r}
+australia.soybean%>%
+  filter(year==1970)%>%
+  ggplot(aes(y=yield,x=loc))+
+  geom_violin()+
+  geom_boxplot(width=0.2)
+```
+
+
+```{r}
+with(australia.soybean%>%
+  filter(year==1970),kruskal.test(yield~loc))
+```
+
+
+```{r}
+
+signed_rank = function(x) sign(x) * rank(abs(x))
+
+lm(rank(yield)~1+I(loc=="Lawes")+I(loc=="Nambour")+I(loc=="RedlandBay"),data=australia.soybean%>%
+  filter(year==1970)) %>%
+  summary()
+
+
+
+
+
+
+wilcox.test(yield~year,data=australia.soybean)
+
+cbind(rank(australia.soybean$yield),australia.soybean$yield)
+
+
+lm(signed_rank(yield)~1,data=australia.soybean) %>%
+  summary()
+
+wilcox.test(signed_rank(yield)~1,data=australia.soybean) 
+
+```
+
+

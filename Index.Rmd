@@ -1,0 +1,484 @@
+---
+title: "Introduction to Statistical Modelling in R - Part 1"
+output: 
+  learnr::tutorial:
+    css: css/style.css
+runtime: shiny_prerendered
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(ggfortify)
+library(learnr)
+library(broom)
+library(knitr)
+library(emmeans)
+library(DT)
+library(shiny)
+library(gt)
+library(brms)
+
+quakes<-quakes
+whales<-readRDS("data/whales.RDS")
+```
+
+## Introduction
+
+In this module we will review a lot of key concepts around statistical modelling, using one of the simplest statistical models as our main reference point to illustrate these points.
+
+So this week we will be looking into simple linear regression models, and then in the next module we will look at lots of different ways we can build upon and extend this.
+
+We are assuming that you have probably come across the topic of linear regression models before. Even if you have, there is a nice video from Crash Course Statistics which provides a nice refresher of the methodology and we will recap it within this workbook.
+![](https://www.youtube.com/watch?v=WWqE7YHR4Jc) 
+
+
+In the video for this module I explore the links between "linear regression" and a lot of the methods you will have learnt as "hypothesis tests" or "Analysis of Variance" or "Analysis of Covariance". In fact, as far as I am concerned, there is no difference between any of these methods - they are in fact all very slightly different flavours of exactly the same thing - a "general linear model"!
+
+## Data used in this session
+
+The data used for this session is the same one that we saw back in the Exercises for the Exploratory Data analysis module - concerning earthquakes near Fiji. 
+
+```{r}
+DT::datatable(quakes)
+```
+
+Reference for the data:
+
+This is one of the Harvard PRIM-H project data sets. They in turn obtained it from Dr. John Woodhouse, Dept. of Geophysics, Harvard University.
+
+### Why do we need a model anyway?
+
+In general terms there are three purposes for statistical models, although with multiple sub-purposes within each category!:
+
+1. **Quantify** the way in which independent variable(s) are related to our response variable(s); and thus understand better the nature of their relationship. We can create a model to provide a link between the data and reality.
+2. **Test** key hypotheses of interest. Unlike with a simple hypothesis test we can build a model to account for multiple sources of variation, adjust for structural elements of the research design, and formulate much more nuanced hypotheses to test than would be possible from a pure "hypotheses test" approach.
+3. **Predict** results for future observations, or those with unknown "response" values but known "predictor" values 
+
+
+## Simple linear regression
+
+As a starting point for any model we would need to split up our variables into two categories - "outcome" variables and "predictor" variables. There is a lot of different terminology used her to mean exactly the same thing the most common being "Outcome"/"Dependent"/"Response"/"y" variables on one side vs. "Predictor"/"Independent"/"Explanatory"/"x" on the other.
+
+For a "simple linear regression" we are interested in how changing the value of one "Predictor" variable will influence the values of our "Response" variable. Extending to a "general linear model" will allow for multiple predictor variables, but still with just one response variable per model. Multivariate models are required where we have more than one response variable that we want to include.
+
+If you remember the variables from the `quakes` dataset - we may be interested to explore the relationship between how many monitoring stations reported the event, and how large the magnitude of the earthquake was.
+
+When thinking about this in terms of a model, we would probably want to consider `stations` as the outcome and `magnitude` as the response when thinking about the nature of the relationship between these variables. There is a clear temporal relationship - the earthquake happens and then the stations do or not detect it as a response to the earthquake. 
+A higher intensity of earthquake is likely to lead to a higher number of stations being able to detect the presence of the earthquake. But more stations being able to detect the earthquake will not lead to the earthquake being more intense; by the time the stations have (or have not) detected the earthquake the 'real' value magnitude of that earthquake is already set. (Although of course there may be an additional, slightly tangential, argument about the calibration of the value for the Richter scale being determined based on the stations observations, there is a theoretical 'real' value for the magnitude that is already fixed by that point).
+
+
+
+### Exploring the Data
+
+Let's first of all investigate our data, to take a look at the relationship between magnitude, our "predictor" variable, which should live on the "x" axis; and stations, our response variable on the "y" axis.
+
+
+```{r ggplot1}
+ggplot(data=quakes,aes(y=stations ,x=mag ))+
+  geom_point()
+```
+
+
+Looking at this graph, we can see a pretty clear trend - as magnitude is increasing the number of stations is also increasing. Because of the way the data is collected we see points stacked up vertically - remember than the magnitude is recorded to just 1 decimal place so there is a restricted number of possible values.
+
+
+If you followed through the exercises in Module 1, you will perhaps remember that we already noted some fairly deviations away from drawing a simple straight line, both arising from the data itself and thinking theoretically about the context. Within this module we will temporarily ignore those concerns, and work through an example of fitting a linear regression onto this data and seeing what happens. In the next module we will try to identify some more reasonable alternative methodologies!
+
+
+This does make it easier to summarise this trend numerically as well as visually - for each magnitude value we can calculate the mean number of stations:
+
+```{r }
+quakes %>%
+group_by("Magnitude"=mag) %>%
+  summarise("Number of Earthquakes"=n(),"Average Number of Stations"=mean(stations)) %>% gt()
+```
+
+This is probably too many numbers to be useful - but we could summarise even further, grouping by 0.5 jumps.
+
+```{r }
+quakes %>%
+  mutate(mag2=cut(mag,breaks=c(0,4.45,4.95,5.45,5.95,6.45),labels=c("4.0-4.4","4.5-4.9","5.0-5.5","5.5-4.9","6.0-6.4"))) %>%
+group_by("Magnitude"=mag2) %>%
+  summarise("Number of Earthquakes"=n(),"Average Number of Stations"=mean(stations)) %>% gt()
+```
+
+### Correlation
+
+As a quick reminder we can calculate a correlation coefficient; and also create a statistical hypothesis test around this. Our null hypothesis would be "The correlation coefficient is zero","i.e there is no correlation between magnitude and number of stations reporting"
+
+
+```{r cor0,exercise=TRUE}
+quakes %>%
+  summarise(cor(mag,stations))
+
+cor.test(quakes$mag,quakes$stations)
+```
+
+The correlation is pretty strong, -0.69, as we might expect from looking at the plot. It is negative, because hippocampus volume is decreasing with an increase in years of football playing. 
+But correlation coefficient is a very limited type of analysis - we can learn much more through using a modelling approach.
+
+### Fitting a line to the plot
+
+You probably learnt at school about the idea of 'putting a line through' your points when you see a scatter plot like this. We have already learnt about `geom_smooth`, but as discussed previously it defaults to a moving average type model. However we can change the `method` argument to fit a simple straight line instead. Looking at the plot, a straight line does look like a reasonable choice for modelling this data.
+
+```{r plotlm,exercise=TRUE}
+ggplot(data=quakes,aes(y=stations ,x=mag ))+
+  geom_point()+
+    geom_smooth(method="lm")
+```
+By default we see a 95% confidence interval shaded around the trend line.
+
+### Fitting the Model
+
+To examine what we actually have in our model, we need to fit the model ourself. We do this using the `lm()` command. The syntax for this is very similar to what we saw in the previous module for t-tests, with a response variable, a tilde, then the explanatory variable. 
+Like with the `t.test` function, the data argument comes after the formula. So if we were to use a pipe from data into `lm()` we would need to specify `data=.` within the `lm` function.
+
+```{r mdo1,exercise=TRUE}
+lm(stations~mag,data=quakes)
+```
+
+The output here only tells us two things: 
+
+* "Call" - simply repeating back the model we have specified 
+* "Coefficients": Telling us the values of the parameters
+ 
+A linear regression follows the equation of a straight line y = B0 + B1x. You may have learnt this same equation as y=a+bx or y=mx+c ; depending on where and when you went to school.
+
+The coefficients give us the value of our intercept (B0): 7599 and the value of our slope (B1): -130.
+
+So the overall model would be:
+
+Number of Stations  = -180  + 46 * Magnitude + $\epsilon$
+
+The value of the intercept is interpreted as the expected value of the response variable where all explanatory variables are equal to zero.
+So for an earthquake of 0.0 on the Richter scale we would expect that -180 stations would report this. For obvious reasons this is not a sensible interpretation to make! And it is often the case that the intepretation behind the intercept is not going to be useful, because it would involve extrapolation beyond the observed domain of the data.
+
+```{r}
+ggplot(data=quakes,aes(y=stations ,x=mag ))+
+  geom_point()+
+    geom_smooth(method="lm",se = FALSE,fullrange = TRUE)+
+
+  geom_hline(yintercept = -180.42,col="red",linewidth=1,linetype=2)+
+    geom_vline(xintercept = 0,col="red",linewidth=1,linetype=2)+
+     annotate(geom="label",x=0.8,y=(-180.42 ),col="red",label="y = -180.42")+
+  annotate(geom="label",x=0,y=(-150 ),col="red",label="x = 0")+
+      annotate(geom="segment",x=5,xend=6,y=(-180.42+5*46.28 ),col="forestgreen",linewidth=2)+
+    annotate(geom="segment",x=6,y=(-180.42+5*46.28 ),yend=(-180.42+6*46.28 ),col="forestgreen",linewidth=2)+
+     annotate(geom="label",x=5.5,y=(-180.42+5*46.28 ),col="forestgreen",label="+1")+
+     annotate(geom="label",x=6,y=(-180.42+5.5*46.28 ),col="forestgreen",label="+46.28")+
+       annotate(geom="label",x=1,130,label="y = -180.42 + 46.28x",size=6)+
+    theme_light()+
+    scale_y_continuous(breaks=seq(-160,160,by=80),limits=c(-181,130))+
+    scale_x_continuous(limits=c(0,6.5))
+```
+
+The value of the slope represents the change we expect to see in the response variable for a one unit increase in the magnitude. 
+So for a one point increase in the richter scale intensity we would expect 46 more stations to report the earthquake
+
+The output at this stage has not told us anything about the error term, $\epsilon$. 
+
+However we can get much more information from our model than this! R is a little different from many other software packages, which will produce a lot of different outputs when you create a model. In R you have to ask specifically for what you want out of a model.
+
+### Summarising the model paramters
+
+```{r summary,exercise=TRUE}
+mod1<-lm(stations~mag,data=quakes)
+summary(mod1)
+```
+
+`summary()` provides us with a lot of useful information in a customised output format containing model fit statistics, standard errors and p-values for the coefficients.
+
+The `broom` library also provides the functions `glance()` and `tidy()`. This extracts very similar information to `summary()` but returns it in the form of data frames. This can be very useful if we want to export results from this model into other analyses or to make the output look nice in our reports. 
+
+Overall the information tells us that the relationship between the Years playing football and hippocampus volume is highly significant. p<0.001
+
+The intercept is also significant! But remember that this is almost certainly not of interest. The null hypothesis which generates this p-value is that the intercept is equal to 0. Which is probably not a sensible null hypothesis to test, an earthquake of magnitude 0.0 (i.e. no earthquake) will by definition be detected by 0 stations - unless there is a problem with detecting False Positives.
+
+
+## R-Squared
+
+We can also see that 72% of the variability in the number of stations can be explained by the linear increase in the magnitude. You can read a little bit about r-squared, and why the adjusted r-squared is also a useful metric to consider [here](https://thestatsgeek.com/2013/10/28/r-squared-and-adjusted-r-squared/).
+
+We have actually seen this 72% number before (sort of). Look at the square root of this number:
+
+```{r sqrt1}
+sqrt(0.7245)
+```
+
+*Where have you seen this number before?*
+
+Maybe you remember it from here:
+```{r cor2,exercise=TRUE}
+cor(quakes$mag,quakes$stations)
+```
+
+
+```{r ci1,exercise=TRUE}
+confint(mod1)
+```
+
+## Error Term
+
+Showing concept of residuals visually
+
+```{r}
+
+quakes$resid<-resid(mod1)
+quakes$std_resid<-rstandard(mod1)
+
+quakes %>%
+  summarise(mean(resid),sd(resid),
+            mean(std_resid),sd(std_resid))
+
+(ggplot(quakes,aes(y=resid,group=1,x=1))+
+  geom_boxplot()) %>% plotly::ggplotly()
+
+summary(mod1)
+
+(ggplot(quakes,aes(x=mag,y=stations,fill=resid,std_resid=std_resid))+
+    geom_smooth(method="lm")+
+  geom_point(shape=21,colour=alpha("black",0.5))+
+    scale_fill_distiller(palette="Spectral")) %>% plotly::ggplotly()
+
+
+
+(ggplot(quakes,aes(x=mag,y=resid,fill=stations,std_resid=std_resid))+
+    geom_smooth(method="lm",se=FALSE)+
+  geom_point(shape=21,colour=alpha("black",0.5))+
+    scale_fill_distiller(palette="Spectral")) %>% plotly::ggplotly()
+
+```
+
+Linking statistics and values of residuals to plots
+
+```{r}
+
+
+summary(mod1)
+sigma(mod1)
+
+ggplot(quakes,aes(x=resid))+
+  geom_histogram()+
+  geom_vline(xintercept = 0,col="red",linetype=2,linewidth=1.5)+
+  geom_vline(xintercept = -0.474,col="blue",linetype=2,linewidth=1.5)+
+    geom_vline(xintercept = c(11.5,-11.5),col="forestgreen",linetype=2,linewidth=1.5)+
+  annotate(geom="label",x=5,y=145,label="mean=0",col="red")+
+  annotate(geom="label",x=-0.75,y=145,label="median=-0.474",col="blue",hjust=1)+
+  annotate(geom="label",x=c(11.5),y=125,label=c("Residual Standard Error = Sigma = 11.5"),col="forestgreen",hjust=0)
+```
+
+
+
+
+```{r}
+quakes$order<-1:1000
+
+(ggplot(quakes,aes(x=order,y=resid,fill=stations))+
+    geom_smooth(se=FALSE)+
+  geom_point(shape=21,colour=alpha("black",0.5))+
+    scale_fill_distiller(palette="Spectral")) %>% plotly::ggplotly()
+```
+
+
+
+### Making predictions / Prediction Intervals vs Confidence Intervals
+
+Remember in our original data we had nobody who had between 1 and 6 years of football experience. If we are happy we have a sensible model then we can make predictions about what we would expect the average hippocampus volume to be for footballers with that level of experience.
+
+To make predictions we first need to create a new data frame containing the values we want to predict. In this example we just have one explanatory variable, so we create a data frame with just one variable. The variable name in the new data frame has to match the variable name from the original data. If we had a model with more than one variable we would need to make sure that the prediction data frame contains new variables for all of the variables from the model.
+
+```{r}
+predict_data<-data.frame(mag=seq(4,6.6,by=0.5))
+augment(mod1,newdata=predict_data,se_fit = TRUE)
+
+```
+
+
+
+```{r}
+
+interval_width=0.95
+
+predict_data<-data.frame(mag=seq(4,8,by=0.05))
+intervals<-rbind(data.frame(interval="confidence",augment(mod1,newdata=predict_data,se_fit = TRUE,
+                                                          interval = "confidence",conf.level = interval_width)),
+data.frame(interval="prediction",augment(mod1,newdata=predict_data,se_fit = TRUE,interval = "prediction"
+                                         ,conf.level = interval_width))) %>%
+  mutate(interval=factor(interval,levels=c("prediction","confidence")))
+
+ggplot(data=quakes,aes(y=stations ,x=mag ))+
+  geom_point()+
+    geom_smooth(method="lm",se=FALSE)+
+  geom_ribbon(data=intervals,aes(ymin =.lower,ymax=.upper,x=mag,y=.fitted,fill=interval ),alpha=0.5)
+      
+```
+
+
+### Checking Model
+
+We should also check our residual plots to assess model validity. It is worth recapping, or learning how to interpret these plots, as it can take some practice to know what you are looking for. "Statistics by Jim" has a nice overview: https://statisticsbyjim.com/regression/ols-linear-regression-assumptions/
+
+
+
+```{r check_res,exercise=TRUE,message=FALSE,warning=FALSE}
+par(mfrow=c(2,2))
+plot(mod1)
+```
+
+Do these plots look OK? What are we actually looking for here?
+
+In this case, most of the plots do not look fine: 
+
+* There are some apparent trends in the first plot. Suggesting that a straight line is not a sensible model.
+* The second plot shows points for the most part lining up nicely, but with deviation at the higher end of the range away from normality.
+* In the third plot there is some clear evidence of an increase in variability with increasing predicted value. But this is not a major deviation - the trend line being drawn on the scale location plot perhaps looks worse than it should, because of how well predicted the two lowest values in the data were.
+* In the fourth plot we can see an association between the higher leverage points, and the higher residual values. Indicating that the outlying values may be influencing our trends. However this is potentially the least of our concerns - none of the largest residual values belong to observations at either extreme of the x axis, which is the circumstance under which leverage can start to play a big factor.
+* Throughout the plots we can see many standardised residuals higher than 2. We would expect around 95% of our data to fall ibetween -2 and +2, and for an even split between the remainder being greater than 2, and those less than -2:
+```{r}
+sum(quakes$std_resid>2)/1000 
+sum(quakes$std_resid<-2)/1000 
+```
+
+Overall we don't see an excessive amount of residuals outside the range. But we have 32 points > 2 and only 2 points <-2. This is again suggesting further evidence of some issues here with our model - although it is harder with this assessment to pinpoint the reason behind the issues; unlike the more direct assessments that can be made from the other ways of looking at the plots - the issues could relate to non-constant variance, or to normality assumption, or to unobserved variables. 
+
+
+
+One thing that has the potential to account for any of those issues in the model validity is if there are key un-accounted variables that could be added to the model, to explain the trends seen in the curvature and the higher end of the range.
+
+* Add extra variables into the model. Other variables may help to explain why there are non-linear patterns, or why some values appear to be outliers. 
+
+* Remove outliers, and conduct a sensitivity analysis. By comparing results with and without individual strange looking points, this will help us understand whether these outliers have any impact on our conclusions.
+
+* Transform variables. Different transformations may help to model non-linear relationships, particular considering different types of curves. Log transformations can also help with heterogeneity, in particular if variance is increasing as the response variable increases. Sometimes transformations might help to deal with issues with normality as well.
+
+Where we still see problems, there are several things we could do to try to improve our model. Our actions would depend on what problems we observed.
+
+* With severe violations of normality or heterogeneity we may consider moving to a generalised linear model. This will make a different set of distributional assumption about our residuals. We will discuss this more in Module 5 of the course.
+
+## Adding in an example with numeric + cateogrical variable to show modelling with factors, link to t-test & interactions
+
+Remember from the exploration that there were two clear clusters of earthquakes locations - we can bring this in as an additional consideration for whether more stations detect earthquakes on the "West" or "East" cluster
+
+```{r ggplot1}
+quakes$cluster<-ifelse(quakes$long<175,"West","East")
+
+ggplot(data=quakes,aes(y=stations ,x=cluster,colour=cluster ))+
+  geom_boxplot()
+```
+
+Looking first alone at the variable - looks like West is a little higher:
+
+We could do a t-test?
+
+```{r ggplot1}
+t.test(stations~cluster,data=quakes,var.equal = TRUE)
+```
+
+Link the t-test to a linear model. It is the same!
+
+```{r}
+lm(stations~cluster,data=quakes) %>% summary()
+```
+
+And now extent it to combine: do we have no additional effect of adding in cluster variable (due to correlation with mag), a parallel trend or a non-parallel trend
+
+```{r}
+ggplot(data=quakes,aes(y=stations ,x=mag,colour=cluster ))+
+  geom_point()+
+  geom_smooth(method="lm")
+```
+
+Fitting the model with parallel trend:
+
+```{r}
+lm(stations~mag+cluster,data=quakes) %>% summary()
+```
+
+Definitely looks like something.
+(Explain coefficients and concept of holding variables constant)
+
+Non-parallel trend:
+
+```{r}
+lm(stations~mag*cluster,data=quakes) %>% summary()
+```
+
+Looks like nothing (explain coefficient interpretation, and why it now looks like cluster is "Not significant")
+
+## Example with two numeric variables
+
+```{r}
+ggplot(data=quakes,aes(y=stations ,x=depth ))+
+  geom_point()+
+  geom_smooth()
+```
+
+
+```{r}
+ggplot(data=quakes,aes(y=stations ,x=depth ))+
+  geom_point()+
+  geom_smooth(method="lm")
+```
+
+```{r}
+ggplot(data=quakes,aes(y=stations ,x=mag,colour=cut(depth,breaks=c(0,150,300,450,600,750)) ))+
+  geom_point()+
+  geom_smooth(method="lm",se=FALSE)+
+  labs(col="Depth")
+```
+
+
+
+```{r}
+lm(stations~mag+depth,data=quakes) %>% summary()
+
+lm(stations~mag*depth,data=quakes) %>% summary()
+```
+
+Effect of depth may also be quadratic?
+
+```{r}
+
+lm(stations~mag+depth+I(depth**2),data=quakes) %>% summary()
+
+```
+
+
+
+
+End here? Or possibly one more example to link in ANOVA with multiple groups?
+Suggesting this example as it can lead into extensions in module 5 about mixed models and time series:
+https://knb.ecoinformatics.org/view/urn%3Auuid%3Ae3939e37-bc7c-488b-b64d-43c0494a3593
+
+```{r}
+
+
+
+```
+
+
+
+## References 
+
+Simple Linear Regression in R (Marin Stats Lectures): https://www.youtube.com/watch?v=66z_MRwtFJM
+There are lots of subsequent videos on this channel about other statistical modelling techniques
+
+Linear Regression Tutorial: (UC Business Analytics R Programming Guide) https://uc-r.github.io/linear_regression
+
+Common statistical tests are linear models (Jonas Lindeløv):
+https://lindeloev.github.io/tests-as-linear/
+
+When to use regression Analysis (Statistics by Jim): https://statisticsbyjim.com/regression/when-use-regression-analysis/
+
+UCLA Data Analysis Examples: https://stats.idre.ucla.edu/other/dae/
+
+
+## Referneces - module 5
+
+https://bookdown.org/content/4857/
+
+https://mdsr-book.github.io/mdsr2e/ch-modeling.html
