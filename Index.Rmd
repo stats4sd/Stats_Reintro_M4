@@ -1634,5 +1634,3 @@ When to use regression analysis (Statistics by Jim):
 <https://statisticsbyjim.com/regression/when-use-regression-analysis/>
 
 UCLA Data Analysis Examples: <https://stats.idre.ucla.edu/other/dae/>
-
-## 
