@@ -1635,8 +1635,4 @@ When to use regression analysis (Statistics by Jim):
 
 UCLA Data Analysis Examples: <https://stats.idre.ucla.edu/other/dae/>
 
-## Referneces - module 5
-
-<https://bookdown.org/content/4857/>
-
-<https://mdsr-book.github.io/mdsr2e/ch-modeling.html>
+## 
