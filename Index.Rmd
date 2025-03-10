@@ -1,5 +1,5 @@
 ---
-title: "Introduction to Statistical Modelling in R - Part 1"
+title: "Introduction to Statistical Modelling - The General Linear Model"
 output: 
   learnr::tutorial:
     css: css/style.css
@@ -833,9 +833,9 @@ As you are starting to see, increasing the number of variables is
 mathematically possible (as long as you have more observations than you
 do variables) but:
 
-i) increases the complexity of being able to intepret what the model is
-actually telling us. ii) can make the model over-fitted, and less
-stable, as we saw in the simulations earlier
+i)  increases the complexity of being able to intepret what the model is
+    actually telling us. ii) can make the model over-fitted, and less
+    stable, as we saw in the simulations earlier
 
 There is a statistical principle of "parsimony" - that we do not want to
 make things more complicated than they need to be. Given the lack of a
