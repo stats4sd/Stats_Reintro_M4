@@ -112,7 +112,7 @@ this equation we will be able to
 1.  **Quantify** the extent that our independent variable(s) are related
     to our response variable(s), and understand the way in which these
     independent variable(s) are linked to the response.
-2.  **Summarise** the extent to which our model cannot not explain the
+2.  **Summarise** the extent to which our model cannot explain the
     outcome variable - through exploration of the residual error term.
 3.  **Test** key hypotheses of interest, which account for multiple
     sources of variation, & can adjust for structural elements of the
@@ -351,7 +351,7 @@ recording 0.0 on the Richter scale we would expect a total of -180 to
 report this earthquake. For obvious reasons this is not an especially
 sensible interpretation! In itself is not a problem with the model -
 extrapolating outside of the observed range of values is extremely
-dangerous, and not generally not recommended. It is more important that
+dangerous, and generally not recommended. It is more important that
 the the model provides coherent results within the observed range of
 values (or the "domain" of values).
 
@@ -381,8 +381,8 @@ ggplot(data=quakes,aes(y=stations ,x=mag ))+
 
 ## Summarising the model
 
-Up until now the output at this stage has not told us anything about the
-error term, $\epsilon$, so lets look at a more detailed summary to
+The output at this stage has not told us anything about the
+error term, $\epsilon$, so let's look at a more detailed summary to
 explore it further
 
 ```{r }
@@ -393,8 +393,8 @@ R breaks down it's summary into three main components:
 
 #### "Residuals"
 
-This component producing summary statistics around the residual values.
-This can help us to in two main ways: Firstly to identify if there are
+This component produces summary statistics around the residual values.
+This can help us in two main ways: firstly to identify if there are
 any particularly badly predicted points by looking at the min and the
 max values.
 
@@ -490,7 +490,7 @@ deviate away from the line.
 
 The R squared values quantify what percentage of the variability in the
 `y` variable is explained by the model. The multiple R square value of
-72%, tells us that 72% of the titak variability in the number of
+72%, tells us that 72% of the total variability in the number of
 stations can be explained by the linear increase in the magnitude of the
 earthquake here. You can read a little bit about r-squared, and why the
 adjusted r-squared is also a useful metric to consider
@@ -1228,8 +1228,8 @@ was over-estimated by more than 10 within that period?
 
 ### Normality
 
-The important point to remember is that the only distriubtion that
-matters is distribution of the residuals, and whether these are
+The important point to remember is that the only distribution that
+matters is the distribution of the residuals, and whether these are
 approximately normally distributed. Whether any of the variables inside
 the model follow normal distributions is completely irrelevant to
 whether or not the model may be valid.
@@ -1293,7 +1293,7 @@ ggplot(q50,aes(x=mag,y=stations))+
 ```
 
 There is one observation with a high magnitude and a low number of
-earthquakes reporting (coloured in red). There is also one earthquake
+stations reporting (coloured in red). There is also one earthquake
 with 4.5 magnitude which has a similar residual value to the larger
 earthquake (coloured in green). The residual values for both of these
 points is very similar - they are both a similar distance from the line.
