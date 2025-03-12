@@ -23,6 +23,7 @@ library(DT)
 library(shiny)
 library(gt)
 library(plotly)
+library(agridat)
 quakes<-datasets::quakes %>%
           mutate(order=1:1000)
 quakes$cluster<-ifelse(quakes$long<175,"West","East")
@@ -1459,9 +1460,7 @@ Retrieved from: https://three-mode.leidenuniv.nl/data/soybeaninf.htm
 This data contains the year the crop was harvested, the height of the plant in metres, the yield in metric tonnes per hectare, which one of four locations the plant was grown in, the protein content of the beans (in % of total weight), the oil content of the beans (in % of total weight) and whether it was a "local" or "improved" variety of soybean. 
 
 ```{r}
- library(agridat)
-
-australia.soybean<-australia.soybean %>%
+australia.soybean<-agridat::australia.soybean %>%
    mutate(gen2=as.numeric(substr(gen,2,3)),
                           variety=ifelse(gen2>=41,"Improved","Local"),
           year=factor(year)) %>%
