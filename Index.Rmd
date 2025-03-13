@@ -52,13 +52,15 @@ simple linear regression, t-tests, ANOVA, ANCOVA, multiple linear
 regression (and many others beyond this) can all be considered to be
 identical - a "general linear model". I will explain more in the video:
 
+![](https://youtu.be/KPsIULc6tbQ)
+
 So this week we will be looking into simple linear regression models and
 extend it into "general linear models", and then in the next module we
 will look at lots of different ways we can extend this even further
 where the assumptions underlying the general linear model no longer
 hold.
 
-![](https://youtu.be/KPsIULc6tbQ)
+
 
 ## Data used in this session
 
@@ -1801,7 +1803,13 @@ Linear Regression Tutorial: (UC Business Analytics R Programming Guide)
 Common statistical tests are linear models (Jonas Lindeløv):
 <https://lindeloev.github.io/tests-as-linear/>
 
+Everything is a linear model (Daniel Roelfs)
+<https://danielroelfs.com/blog/everything-is-a-linear-model/>
+
 When to use regression analysis (Statistics by Jim):
 <https://statisticsbyjim.com/regression/when-use-regression-analysis/>
+
+OLS Linear Regression Assumptions (Statistics by Jim):
+<https://statisticsbyjim.com/regression/ols-linear-regression-assumptions>
 
 UCLA Data Analysis Examples: <https://stats.idre.ucla.edu/other/dae/>
