@@ -27,7 +27,7 @@ library(agridat)
 quakes<-datasets::quakes %>%
           mutate(order=1:1000)
 quakes$cluster<-ifelse(quakes$long<175,"West","East")
-
+lm(stations~mag,data=quakes)->mod0
 lm(stations~mag+cluster,data=quakes)->mod1
 plot_theme<-theme_light()+
   theme(plot.title=element_text(face =2,size=18),
@@ -284,8 +284,8 @@ name was added a bit later on, once enough people had started to modify
 this algorithm in different ways to fit slightly different purposes!
 
 ```{r}
-quakes$resid<-resid(mod1)
-quakes$std_resid<-rstandard(mod1)
+quakes$resid<-resid(mod0)
+quakes$std_resid<-rstandard(mod0)
 
 (ggplot(quakes,aes(x=mag,y=stations,col=resid))+
   geom_point()+
@@ -738,7 +738,7 @@ ggplot(data=quakes,aes(y=stations ,x=cluster,colour=cluster ))+
 ```{r}
 quakes %>%
   group_by(cluster) %>%
-    summarise(mean(stations),sd(stations))
+    summarise(mean(stations),sd(stations)) %>% gt()
 ```
 
 The general distribution of the number of stations seems pretty similar,
@@ -1343,9 +1343,7 @@ earthquakes in groups of 50
     stat_summary()+
     geom_smooth(se=FALSE)+
        plot_theme+
-   xlab("Time Group")+
-  #geom_point(shape=21,colour=alpha("black",0.5))+
-    scale_fill_distiller(palette="Spectral")) %>% plotly::ggplotly()
+   xlab("Time Group")) %>% plotly::ggplotly()
 ```
 
 From this summary we are now seeing the increasing trend over time a bit
