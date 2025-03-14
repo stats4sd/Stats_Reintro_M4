@@ -1220,7 +1220,7 @@ residual values on the y axis. It can often be the case that curvature
 in one variable's relationship with the outcome variable is explained
 through the way in which other variables fit into the overall model.
 
-Within this plot then we look for any pattern at all at all. If all
+Within this plot then we look for any pattern at all. If all
 variables combined can provide a plausible linear relationship then
 there will be no trend within the plot - it will just look like random
 noise on the plot. Instead what we see is something that looks like a
