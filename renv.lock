@@ -5,6 +5,10 @@
       {
         "Name": "CRAN",
         "URL": "https://packagemanager.posit.co/cran/latest"
+      },
+      {
+        "Name": "LINUX_P3M",
+        "URL": "https://packagemanager.rstudio.com/cran/latest"
       }
     ]
   },
