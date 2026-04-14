@@ -1397,7 +1397,7 @@ geom_histogram()) %>% plotly::ggplotly()
 ```{r}
 (ggplot(quakes,aes(sample=resid))+plot_theme+
   stat_qq()+
-  stat_qq_line()) %>% plotly::ggplotly()
+  stat_qq_line()) 
 ```
 
 It looks like there is some deviation from normality - at the upper end
